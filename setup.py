@@ -16,8 +16,8 @@ setup(
     long_description=long_description,
     packages=['lcu_driver'],
     install_requires=[
-        'requests',
         'aiohttp',
+        'psutil'
     ],
     classifiers=[
         'Programming Language :: Python :: 3.7',
