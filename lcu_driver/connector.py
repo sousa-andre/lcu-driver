@@ -1,11 +1,12 @@
 import asyncio
+from json import loads
 from sys import platform
-from typing import Optional, Dict, Tuple
+from typing import Optional, Union, Dict, Tuple, List
 
 import aiohttp
 from psutil import process_iter, Process
 
-from .exceptions import CoroutineExpected, EarlyPerform, IntegrityError, PlatformNotSupported
+from .exceptions import CoroutineExpected, EarlyPerform, PlatformNotSupported, InvalidURI
 
 
 if platform != 'win32':
@@ -24,6 +25,8 @@ class Connector:
         self._installation_path = None
 
         self._ws = None
+        self._stop_ws = False
+        self._ws_events = []
         self._initialize_websocket = False
 
         self._disconnected_call = False
@@ -63,6 +66,8 @@ class Connector:
     async def request(self, method: str, endpoint: str, **kwargs):
         if self._session is None:
             raise EarlyPerform('request tried to be made with uninitialized API')
+        elif endpoint[0] != '/':
+            raise InvalidURI('backslash', endpoint)
 
         url = f'{self.address}{endpoint}'
         if 'path' in kwargs:
@@ -71,7 +76,7 @@ class Connector:
 
         try:
             return await self._session.request(method, url, **kwargs, verify_ssl=False)
-        except aiohttp.client_exceptions.ClientConnectorError:
+        except (aiohttp.client_exceptions.ClientConnectorError, aiohttp.client_exceptions.ClientOSError):
             if not self._disconnected_call:
                 self._disconnected_call = True
                 await self._run_event('disconnect')
@@ -87,7 +92,39 @@ class Connector:
             else:
                 pass
         else:
-            raise CoroutineExpected(f'replace "def {coro.__name__}" by "async def {coro.__name__}"')
+            raise CoroutineExpected(coro.__name__)
+
+    def ws_events(self, endpoints: List[str], *, event_types: Optional[List[str]] = None, max_calls=-1):
+        def ws_event_func_wrapper(coro):
+            async def ws_event_args_wrapper(event_type, uri, data):
+                if ws_event_args_wrapper.left_calls > 0:
+                    ws_event_args_wrapper.left_calls -= 1
+                    await coro(event_type, uri, data)
+                elif ws_event_args_wrapper.left_calls < 0:
+                    await coro(event_type, uri, data)
+
+            ws_event_args_wrapper.left_calls = max_calls
+
+            if asyncio.iscoroutinefunction(coro):
+                inner_event_types = event_types or ['Create', 'Update', 'Delete']
+
+                for endpoint in endpoints:
+                    if endpoint[0] != '/':
+                        raise InvalidURI('backslash', endpoint)
+                    for event_type in inner_event_types:
+                        event = {
+                            'eventType': event_type.lower(),
+                            'uri': endpoint.lower(),
+                            'coroutine': ws_event_args_wrapper
+                        }
+                        if event not in self._ws_events:
+                            self._ws_events.append(event)
+
+            else:
+                raise CoroutineExpected(coro.__name__)
+
+            return ws_event_args_wrapper
+        return ws_event_func_wrapper
 
     @staticmethod
     def _parse_cmdline_args(cmdline_args) -> Dict[str, str]:
@@ -120,12 +157,38 @@ class Connector:
         self._installation_path = None
 
         self._ws = None
+        self._ws_events = {}
+        self._stop_ws = False
 
     async def _start_websocket(self) -> None:
         self._ws = await self._session.ws_connect(self.ws_address, ssl=False)
-        async for _ in self._ws:
-            pass
-        if not self._disconnected_call:
+        await self._ws.send_json([5, 'OnJsonApiEvent'])
+        _ = await self._ws.receive()
+
+        while not self._stop_ws:
+            if self._stop_ws:
+                break
+            msg = await self._ws.receive()
+
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                data = loads(msg.data)[2]
+
+                for event in self._ws_events:
+                    if (data['eventType'].lower() == event['eventType'] and
+                        data['uri'] == event['uri']) or \
+                            (event['uri'][-1] == '/' and
+                                data['uri'].startswith(event['uri']) and
+                                data['eventType'].lower() == event['eventType']):
+
+                        if event['coroutine'].left_calls != 0:
+                            asyncio.create_task(event['coroutine'](
+                                data['eventType'], data['uri'], data['data']
+                            ))
+
+            elif msg.type == aiohttp.WSMsgType.CLOSED:
+                break
+
+        if not self._disconnected_call and not self._stop_ws:
             self._disconnected_call = True
             await self._run_event('disconnect')
 
@@ -155,15 +218,22 @@ class Connector:
         await self._load_api_data()
         await self._wait_api_ready()
 
+        connect_task = asyncio.create_task(self._run_event('connect'))
         if self._initialize_websocket:
-            await asyncio.gather(self._run_event('connect'), self._start_websocket())
+            await asyncio.gather(connect_task, self._start_websocket())
         else:
-            await self._run_event('connect')
+            await connect_task
         self._clean_attributes()
         await self._session.close()
 
     def start(self) -> None:
-        self.loop.run_until_complete(self._start_all())
+        try:
+            self.loop.run_until_complete(self._start_all())
+        except KeyboardInterrupt:
+            self.loop.stop()
 
-    def wait(self) -> None:
+    def listen(self) -> None:
         self._initialize_websocket = True
+
+    async def stop_ws(self) -> None:
+        self._stop_ws = True

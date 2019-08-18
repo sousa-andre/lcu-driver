@@ -4,60 +4,68 @@ Python interface for LCU API. Only support Windows platform. Inspired in [lcu-co
 
 ## Download
  - `pip install lcu-driver`
- 
- - `pip install git+https://github.com/sousa-andre/lcu-driver.git` (development version)
- 
+
 ## Code example
-
-Subclassing Connector:
+##### Change to a random chinese icon every time your run the application.
 ```python
-import lcu_driver
+from json import dumps
+from random import randint
+
+from lcu_driver import Connector
 
 
-class MyConnector(lcu_driver.Connector):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    async def connect(self):
-        response = await self.request('get', '/lol-summoner/v1/current-summoner')
-        if response.status == 200:
-            data = await response.json()
-            print('You are already logged as {}.'.format(data['displayName']))
-        else:
-            print('You\'re not logged.')
-
-    async def disconnect(self):
-        print('The client has been closed!')
+connector = Connector()
 
 
-con = MyConnector()
-con.start()
-```
+async def set_random_icon():
+    # random number of a chinese icon
+    random_number = randint(50, 78)
 
-Using decorators:
-```python
-import lcu_driver
+    # make the request to set the icon
+    icon = await connector.request('put', '/lol-summoner/v1/current-summoner/icon',
+                                   data=dumps({'profileIconId': random_number}))
 
-
-con = lcu_driver.Connector()
-
-
-@con.event
-async def connect():
-    response = await con.request('get', '/lol-summoner/v1/current-summoner')
-    if response.status == 200:
-        data = await response.json()
-        print('You are logged as {}.'.format(data['displayName']))
+    # if HTTP status code is 201 the icon was applied successfully
+    if icon.status == 201:
+        print(f'Chinese icon number {random_number} was set correctly.')
     else:
-        print('You\'re not logged.')
+        print('Unknown problem, the icon was not set.')
+
+# fired when LCU API is ready to be used
+@connector.event
+async def connect():
+    print('LCU API is ready to be used.')
+
+    # check if the user is already logged into his account
+    summoner = await connector.request('get', '/lol-summoner/v1/current-summoner')
+    if summoner.status == 200:
+        data = await summoner.json()
+
+        # calls login method and update login.left_calls to 0
+        # when login.left_calls is 0 the function can't be fired any more neither by websocket nor manually
+        await login(None, None, data)
+
+    else:
+        print('Please login into your account to change your icon...')
 
 
-@con.event
+# fired when League Client is closed (or disconnected from websocket)
+@connector.event
 async def disconnect():
-    print('The client has been closed!')
+    print('The client have been closed!')
+
+# subscribe to the login websocket event, and calls the function only one time
+@connector.ws_events(['/lol-summoner/v1/current-summoner'], event_types=['Update'],
+                     max_calls=1)
+async def login(typ, uri, data):
+    print('Logged as', data['displayName'])
+    await set_random_icon()
 
 
-con.start()
+# opens websocket connection (may be used to wait until the client is closed)
+connector.listen()
+# starts everything
+connector.start()
 ```
 
 ## Classes and methods
@@ -77,22 +85,29 @@ con.start()
  - #### ws_address
  
 ### Methods
- - #### wait()
-    Keep connected until client closes. (open websocket connection).
  - #### start()
-    Start looking for client using the settings defined in the constructor.
- - #### request(method: str, endpoint: str, **kwargs)
-    - **method** - HTTP verb
+    Start the driver.
+
+ - #### listen()
+    Keep connected until client closes. (open websocket connection).
+    
+  - #### *<coroutine>* stop_ws()
+    Gracefully stops the websocket loop.
+ 
+ - #### *coroutine* request(method: str, endpoint: str, **kwargs)
+    - **method** - HTTP verb.
     - **endpoint** - Resource URL without protocol and host name.
     - **\*\*kwargs**
         - [**<aiohttp.ClientSession>.request**](https://github.com/aio-libs/aiohttp/blob/master/aiohttp/client.py#L279) - function arguments
         - **path** - Alias to *str.format()*
-    
-### Events
+  
+ - #### ws_events(endpoints: list, *, event_types: list, max_calls=-1)
+    - **endpoints** - List of URIs.
+    - **event_types** - List of events types (Create, Update or Delete).
+    - **max_calls** - Maximum times an event function can be called either by the websocket or manually. Set it to negative numbers to remove the limit.
+
+### Built-in library events
  - #### connect
-    Fired when LCU API start.
+    Fired when LCU API starts.
  - #### disconnect
     Fired when the client is closed.
-    
-
- 

@@ -7,7 +7,7 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
     name='lcu-driver',
-    version='0.0.1',
+    version='1.0.0',
     author='André Matos de Sousa',
     author_email='andrematosdesousa@gmail.com',
     license='MIT',
