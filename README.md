@@ -1,4 +1,21 @@
-## lcu-driver
+# lcu-driver
+
+
+##### lcu-driver isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing League of Legends. League of Legends and Riot Games are trademarks or registered trademarks of Riot Games, Inc. League of Legends © Riot Games, Inc.
+
+<p>
+    <a href="">
+        <img src="https://img.shields.io/pypi/v/lcu-driver?style=for-the-badge" alt="PyPi">
+    </a>
+    <a href="">
+        <img src="https://img.shields.io/github/last-commit/sousa-andre/lcu-driver?style=for-the-badge" alt="last-commit">
+    </a>
+    <a href="">
+        <img src="https://img.shields.io/github/license/sousa-andre/lcu-driver?style=for-the-badge" alt="license">
+    </a>
+</p>
+
+##### If you have any questions about how LCU API works or you're having problems with lcu-driver join [Riot API Dev Community](https://discord.gg/riotapi) Discord server or send a private message to André#5360
 
 Python interface for LCU API. Only support Windows platform. Inspired in [lcu-connector](https://github.com/Pupix/lcu-connector)
 
