@@ -59,3 +59,8 @@ html_static_path = ['_static']
 html_theme_options = {
     'fixed_sidebar': True
 }
+
+autodoc_mock_imports = [
+    'aiohttp',
+    'psutil'
+]
