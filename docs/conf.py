@@ -13,9 +13,7 @@
 import os
 import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
-print(os.path.abspath(os.path.join(os.getcwd(), '..')))
-print(os.path.abspath('mymodule'))
+sys.path.insert(0, os.path.abspath(".."))
 
 
 # -- Project information -----------------------------------------------------
@@ -64,3 +62,5 @@ autodoc_mock_imports = [
     'aiohttp',
     'psutil'
 ]
+
+master_doc = 'index'

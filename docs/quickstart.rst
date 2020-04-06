@@ -52,7 +52,7 @@ Examples
 -------
 
 **Not ending with trailing slash**
-................................
+...................................
 `@connector.ws.register('/lol-summoner')` will only match `/lol-summoner` and will never be fired because the endpoint doesn't exit.
 
 **Ending with trailing slash**
