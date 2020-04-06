@@ -57,9 +57,6 @@ class Connector(BaseConnector):
             wrapper()
         except KeyboardInterrupt:
             logger.info('Event loop interrupted by keyboard')
-        finally:
-            self.loop.stop()
-            self.loop.close()
 
     async def stop(self) -> None:
         """Flag the connector to don't look for more clients once the connection finishes his job.

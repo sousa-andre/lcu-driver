@@ -23,7 +23,7 @@ class ConnectorEventManager(ABC):
 
     async def run_event(self, event_name, *args, **kwargs):
         for event in self._handlers.get(event_name, []):
-            asyncio.create_task(
+            await asyncio.create_task(
                 event(*args, **kwargs)
             )
 
