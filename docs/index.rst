@@ -7,7 +7,7 @@ Installation
 ************
 ::
 
-   $ pip install lcu-driver=2.0.0
+   $ pip install lcu-driver
 
 
 Contents
