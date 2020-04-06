@@ -1,5 +1,6 @@
 from setuptools import setup
 
+from lcu_driver import __version__
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
@@ -7,7 +8,7 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
     name='lcu-driver',
-    version='1.0.0',
+    version=__version__,
     author='André Matos de Sousa',
     author_email='andrematosdesousa@gmail.com',
     license='MIT',
