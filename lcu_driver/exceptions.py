@@ -15,10 +15,6 @@ class EarlyPerform(BaseException):
     pass
 
 
-class DevelopmentSideError(BaseException):
-    pass
-
-
 class InvalidURI(BaseException):
     def __init__(self, error_type, used_uri=None):
         if error_type == 'backslash':
