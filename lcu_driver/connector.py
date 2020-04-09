@@ -13,7 +13,7 @@ from .utils import _return_ux_process_when_available
 
 logger = logging.getLogger('lcu-driver')
 
-if platform != 'win32':
+if platform not in ('win32', 'darwin'):
     raise PlatformNotSupported('OS not currently supported')
 
 
