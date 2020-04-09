@@ -68,12 +68,11 @@ class WebsocketEventManager(ABC):
                 if event not in allowed_events:
                     raise RuntimeError(f'Event {event} not recognized.')
 
-            if len(self._registered_uris) < 1:
-                self._registered_uris.append({
-                    'uri': uri,
-                    'event_types': event_types,
-                    'coroutine_or_callable': coro_func
-                })
+            self._registered_uris.append({
+                'uri': uri,
+                'event_types': event_types,
+                'coroutine_or_callable': coro_func
+            })
             return coro_func
         return register_wrapper
 
