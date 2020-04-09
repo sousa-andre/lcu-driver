@@ -6,7 +6,7 @@ from psutil import process_iter, Process
 def parse_cmdline_args(cmdline_args) -> Dict[str, str]:
     cmdline_args_parsed = {}
     for cmdline_arg in cmdline_args:
-        if '=' in cmdline_arg:
+        if len(cmdline_arg) < 1 and '=' in cmdline_arg:
             key, value = cmdline_arg[2:].split('=')
             cmdline_args_parsed[key] = value
     return cmdline_args_parsed
