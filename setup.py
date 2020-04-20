@@ -15,14 +15,10 @@ setup(
     url='https://github.com/sousa-andre/lcu-driver/',
     long_description_content_type='text/markdown',
     long_description=long_description,
-    packages=['lcu_driver'],
+    packages=['lcu_driver', 'lcu_driver.events'],
     install_requires=[
         'aiohttp',
         'psutil'
-    ],
-    classifiers=[
-        'Programming Language :: Python :: 3.7',
-        'Operating System :: Microsoft :: Windows'
     ],
     project_urls={
         'Source': 'https://github.com/sousa-andre/lcu-driver/'
