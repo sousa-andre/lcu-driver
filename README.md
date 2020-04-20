@@ -1,6 +1,6 @@
 # lcu-driver
 
-lcu-driver is a library made to communicate with League of Legends Client API in a easy way. It provides an API capable of handling LCU connection status and websockets events for you and prepare HTTP requests to be used directly with endpoints. Inspired in [lcu-connector](https://github.com/Pupix/lcu-connector). Only works on Windows.
+lcu-driver is a library made to communicate with League of Legends Client API in a easy way. It provides an API capable of handling LCU connection status and websockets events for you and prepare HTTP requests to be used directly with endpoints. Inspired in [lcu-connector](https://github.com/Pupix/lcu-connector). It has been tested on Windows, Linux and MacOS.
 
 <p>
     <a href="">
