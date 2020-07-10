@@ -1,6 +1,6 @@
 from setuptools import setup
 
-from lcu_driver.version import __version__
+__version__ = '2.1.1'
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
