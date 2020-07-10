@@ -1,3 +1,3 @@
 from .connector import Connector
+from .version import __version__
 
-__version__ = '2.1.0'
