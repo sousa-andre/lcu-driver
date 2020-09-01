@@ -20,6 +20,7 @@ class ConnectorEventManager(ABC):
             self.handlers[event_name] += func_or_coro
         else:
             self.handlers[event_name] = [func_or_coro, ]
+        return self.handlers[event_name][-1]
 
     async def run_event(self, event_name, *args, **kwargs):
         for event in self._handlers.get(event_name, []):
@@ -27,14 +28,14 @@ class ConnectorEventManager(ABC):
                 event(*args, **kwargs)
             )
 
-    def open(self, coro_func) -> None:
-        self._set_event('open', coro_func)
+    def open(self, coro_func):
+        return self._set_event('open', coro_func)
 
-    def ready(self, coro_func) -> None:
-        self._set_event('ready', coro_func)
+    def ready(self, coro_func):
+        return self._set_event('ready', coro_func)
 
-    def close(self, coro_func) -> None:
-        self._set_event('close', coro_func)
+    def close(self, coro_func):
+        return self._set_event('close', coro_func)
 
 
 class WebsocketEventManager(ABC):
