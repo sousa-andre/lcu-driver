@@ -21,7 +21,7 @@ lcu-driver is a library made to communicate with League of Legends Client API in
  - `$ pip install lcu-driver`
 
 ### Problems
-When running an application built using lcu-driver, on some users will come across an **AccessDenied** error. To fix this error you should install psutil in a version earlier than 5.7.0. 
+When running an application built using lcu-driver, some users will come across the **AccessDenied** error. To fix this error you should install psutil in a version earlier than 5.7.0. 
 
 Running the command below should solve the problem.
  - `$ pip install -U psutil==5.6.5`
