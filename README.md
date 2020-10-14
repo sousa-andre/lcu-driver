@@ -14,7 +14,7 @@ lcu-driver is a library made to communicate with League of Legends Client API in
     </a>
 </p>
 
-##### If you have any questions about how LCU API works or you're having problems with lcu-driver join [Riot API Dev Community](https://discord.gg/riotapi) Discord server or send a private message to André#5360
+##### If you have any questions about how LCU API works or you're having problems with lcu-driver join [Riot API Dev Community](https://discord.gg/riotgamesdevrel) Discord server or send a private message to André#5360
 
 
 ## Download
