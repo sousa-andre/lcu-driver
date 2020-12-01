@@ -57,10 +57,10 @@ class Connection:
         self.session = aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers)
         setattr(self, 'request', self.request)
 
-        tasks = [
-            asyncio.create_task(self._connector.run_event('open', self)),
-            asyncio.create_task(self._connector.run_event('ready', self))
-        ]
+        tasks = [asyncio.create_task(self._connector.run_event('open', self))]
+        await self._wait_api_ready()
+
+        tasks.append(asyncio.create_task(self._connector.run_event('ready', self)))
         try:
             if len(self._connector.ws.registered_uris) > 0:
                 await self.run_ws()
@@ -184,3 +184,12 @@ class Connection:
                 break
 
         await local_session.close()
+
+    async def _wait_api_ready(self) -> None:
+        while True:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(f'{self.address}/riotclient/region-locale', verify_ssl=False) as _:
+                        break
+            except aiohttp.client_exceptions.ClientConnectorError:
+                pass
