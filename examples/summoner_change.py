@@ -13,7 +13,7 @@ async def connect(connection):
 @connector.close
 async def disconnect(_):
     print('The client have been closed!')
-    await connect.stop()
+    await connector.stop()
 
 
 # subscribe to '/lol-summoner/v1/current-summoner' endpoint for the UPDATE event
