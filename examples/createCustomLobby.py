@@ -59,9 +59,8 @@ async def add_bot_t2(connection):
 
 
 #---------------------------------------------
-# Start
+# start game
 #---------------------------------------------
-
 async def start_game(connection):
     await connection.request('POST', '/lol-lobby/v1/lobby/custom/start-champ-select')
 
@@ -69,7 +68,6 @@ async def start_game(connection):
 #---------------------------------------------
 #  lockfile
 #---------------------------------------------
-
 async def get_lockfile(connection):
     path = os.path.join(connection.installation_path.encode('gbk').decode('utf-8'), 'lockfile')
     if os.path.isfile(path):
@@ -77,6 +75,7 @@ async def get_lockfile(connection):
         text = file.readline().split(':')
         file.close()
         print(f'riot    {text[3]}')
+        print(f'Etag    {base64.b64encode(self.lock_token.encode())}')
         return text[3]
     return None
 
@@ -94,15 +93,22 @@ async def connect(connection):
   await creat_lobby(connection)
   await add_bot_t1(connection)
   await add_bot_t2(connection)
-  await start_game(connection)
+  # await start_game(connection)
+
 
 @connector.close
 async def disconnect(connection):
     print('The client was closed')
     await connector.stop()
 
+
 @connector.ws.register('/lol-lobby/v2/lobby', event_types=('CREATE',))
 async def icon_changed(connection, event):
     print(f'The summoner {event.data["localMember"]["summonerName"]} created a lobby.')
 
+
+#---------------------------------------------
+# main
+#---------------------------------------------
 connector.start()
+
