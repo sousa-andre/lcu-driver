@@ -17,7 +17,7 @@ class ConnectorEventManager(ABC):
 
     def _set_event(self, event_name, func_or_coro: Union[Callable, Awaitable]):
         if event_name in self._handlers:
-            self.handlers[event_name] += func_or_coro
+            self.handlers[event_name].append(func_or_coro)
         else:
             self.handlers[event_name] = [func_or_coro, ]
         return self.handlers[event_name][-1]
