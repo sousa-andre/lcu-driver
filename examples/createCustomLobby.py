@@ -47,7 +47,7 @@ async def add_bot_t2(connection):
   activedata = await connection.request('GET', '/lol-lobby/v2/lobby/custom/available-bots')
   champions = { bot['name']: bot['id'] for bot in await activedata.json() }
   
-  team2EN = ["Caitlyn", "Blitzcrank", "Darius", "Morgana", "Lux"]
+  team2 = ["Caitlyn", "Blitzcrank", "Darius", "Morgana", "Lux"]
   
   for name in team2:
     bots = {
