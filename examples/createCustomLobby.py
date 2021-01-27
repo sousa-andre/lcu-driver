@@ -10,9 +10,9 @@ async def get_summonerdata(connection):
   print(f'{data["displayName"]} Lv.{data["summonerLevel"]}')
 
 #---------------------------------------------
-# Creat Lobby
+# Create Lobby
 #---------------------------------------------
-async def creat_lobby(connection):
+async def create_lobby(connection):
   custom = {
     "customGameLobby": {
       "configuration": {
