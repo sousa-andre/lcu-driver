@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Generator
 
 from psutil import process_iter, Process
 
@@ -12,15 +12,7 @@ def parse_cmdline_args(cmdline_args) -> Dict[str, str]:
     return cmdline_args_parsed
 
 
-def return_process(process_name: List[str]) -> Optional[Process]:
+def _return_ux_process() -> Generator[Process, None, None]:
     for process in process_iter():
-        if process.name() in process_name:
-            return process
-    return None
-
-
-def _return_ux_process_when_available() -> Process:
-    process = None
-    while not process:
-        process = return_process(['LeagueClientUx.exe', 'LeagueClientUx'])
-    return process
+        if process.name() in ['LeagueClientUx.exe', 'LeagueClientUx']:
+            yield process
