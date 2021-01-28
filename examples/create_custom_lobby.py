@@ -47,7 +47,6 @@ async def add_bots_t2(connection):
   champions = { bot['name']: bot['id'] for bot in await available_bots.json() }
   
   team2 = ['Caitlyn', 'Blitzcrank', 'Darius', 'Morgana', 'Lux']
-  team2 = ['黑暗之女', '无极剑圣', '牛头酋长', '武器大师', '堕落天使']
   
   for name in team2:
     bot = { 'championId': champions[name],'botDifficulty': 'MEDIUM', 'teamId': '200' }
