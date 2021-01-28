@@ -35,7 +35,7 @@ async def create_lobby(connection):
 # Add Team1 Bots By Champion ID
 #---------------------------------------------
 async def add_bots_t1(connection):
- soraka = { 'championId': 16, 'botDifficulty': 'EASY', 'teamId': '100' }
+ soraka = { 'championId':16, 'botDifficulty':'EASY', 'teamId':'100' }
  await connection.request('POST', '/lol-lobby/v1/lobby/custom/bots', data=soraka)
 
 
@@ -49,7 +49,7 @@ async def add_bots_t2(connection):
   team2 = ['Caitlyn', 'Blitzcrank', 'Darius', 'Morgana', 'Lux']
   
   for name in team2:
-    bot = { 'championId': champions[name],'botDifficulty': 'MEDIUM', 'teamId': '200' }
+    bot = { 'championId':champions[name], 'botDifficulty':'MEDIUM', 'teamId':'200' }
     await connection.request('POST', '/lol-lobby/v1/lobby/custom/bots', data=bot)
 
 
@@ -87,7 +87,7 @@ async def connect(connection):
   await create_lobby(connection)
   await add_bots_t1(connection)
   await add_bots_t2(connection)
-  await start_game(connection)
+  #await start_game(connection)
 
 
 @connector.close
