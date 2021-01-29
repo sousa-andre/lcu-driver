@@ -97,7 +97,7 @@ async def disconnect(connection):
 
 
 @connector.ws.register('/lol-lobby/v2/lobby', event_types=('CREATE',))
-async def icon_changed(connection, event):
+async def lobby_created(connection, event):
     print(f"The summoner {event.data['localMember']['summonerName']} created a lobby.")
 
 
