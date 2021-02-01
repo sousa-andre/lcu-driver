@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Generator
+from typing import Dict, Generator
 
 from psutil import process_iter, Process
 

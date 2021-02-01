@@ -2,9 +2,6 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Union
-
-from psutil import Process
 
 from .connection import Connection
 from .events.managers import ConnectorEventManager, WebsocketEventManager
@@ -20,14 +17,18 @@ class BaseConnector(ConnectorEventManager, ABC):
         self.ws = WebsocketEventManager()
 
     @abstractmethod
-    def create_connection(self, process_or_string: Union[Process, str]):
+    def register_connection(self, connection: Connection):
         """Creates a connection and saves a reference to it"""
         pass
 
     @abstractmethod
-    def remove_connection(self, lcu_pid):
+    def unregister_connection(self, lcu_pid):
         """Cancel the connection"""
         pass
+
+    @property
+    def should_run_ws(self) -> bool:
+        return True
 
 
 class Connector(BaseConnector):
@@ -36,12 +37,15 @@ class Connector(BaseConnector):
         self._repeat_flag = True
         self.connection = None
 
-    async def create_connection(self, connection):
+    def register_connection(self, connection):
         self.connection = connection
-        await self.connection.init()
 
-    def remove_connection(self, _):
+    def unregister_connection(self, _):
         self.connection = None
+
+    @property
+    def should_run_ws(self) -> bool:
+        return len(self.ws.registered_uris) > 0
 
     def start(self) -> None:
         """Starts the connector. This method should be overridden if different behavior is required.
@@ -56,7 +60,8 @@ class Connector(BaseConnector):
                     time.sleep(0.5)
 
                 connection = Connection(self, process)
-                self.loop.run_until_complete(self.create_connection(connection))
+                self.register_connection(connection)
+                self.loop.run_until_complete(connection.init())
 
                 if self._repeat_flag and len(self.ws.registered_uris) > 0:
                     logger.debug('Repeat flag=True. Looking for new clients.')
@@ -79,13 +84,17 @@ class MultipleClientConnector(BaseConnector):
         super().__init__(loop=loop)
         self.connections = []
 
-    def create_connection(self, connection):
+    def register_connection(self, connection):
         self.connections.append(connection)
 
-    def remove_connection(self, lcu_pid):
+    def unregister_connection(self, lcu_pid):
         for index, connection in enumerate(self.connections):
             if connection.pid == lcu_pid:
                 del connection[index]
+
+    @property
+    def should_run_ws(self) -> bool:
+        return True
 
     def _process_was_initialized(self, non_initialized_connection):
         for connection in self.connections:
@@ -104,7 +113,6 @@ class MultipleClientConnector(BaseConnector):
                     connection = Connection(self, process)
                     if not self._process_was_initialized(connection):
                         tasks.append(asyncio.create_task(connection.init()))
-                        self.create_connection(connection)
 
                     process = next(process_iter, None)
                 await asyncio.sleep(0.5)

@@ -59,12 +59,13 @@ class Connection:
         self.session = aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers)
         setattr(self, 'request', self.request)
 
+        self._connector.register_connection(self)
         tasks = [asyncio.create_task(self._connector.run_event('open', self))]
         await self._wait_api_ready()
 
         tasks.append(asyncio.create_task(self._connector.run_event('ready', self)))
         try:
-            if len(self._connector.ws.registered_uris) > 0:
+            if self._connector.should_run_ws:
                 await self.run_ws()
         except ClientConnectorError:
             logger.info('Client closed unexpectedly')
@@ -74,11 +75,8 @@ class Connection:
 
     async def _close(self):
         await self._connector.run_event('close', self)
-        print('7')
-        self._connector.remove_connection(self._lcu_pid)
-        print('8')
+        self._connector.unregister_connection(self._lcu_pid)
         await self.session.close()
-        print('9')
 
     @property
     def pid(self) -> int:
@@ -150,11 +148,10 @@ class Connection:
     async def request(self, method: str, endpoint: str, **kwargs):
         """Run an HTTP request against the API
 
-        :param method: HTTP method
-        :type method: str
-        :param endpoint: Request Endpoint
-        :type endpoint: str
-        :param kwargs: Arguments for `aiohttp.Request <https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.request>`_. The **data** keyworded argument will be JSON encoded automatically.
+        :param method: HTTP method :type method: str :param endpoint: Request Endpoint :type endpoint: str :param
+        kwargs: Arguments for `aiohttp.Request
+        <https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.request>`_. The **data** keyworded argument
+        will be JSON encoded automatically.
         """
         url = self._produce_url(endpoint, **kwargs)
         if kwargs.get('data'):
