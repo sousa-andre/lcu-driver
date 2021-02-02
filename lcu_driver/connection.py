@@ -36,6 +36,7 @@ class Connection:
         if isinstance(process_or_string, Process):
             process_args = parse_cmdline_args(process_or_string.cmdline())
 
+            self._lcu_pid = process_or_string.pid
             self._pid = int(process_args['app-pid'])
             self._port = int(process_args['app-port'])
             self._auth_key = process_args['remoting-auth-token']
@@ -44,6 +45,7 @@ class Connection:
         elif isinstance(process_or_string, str):
             lockfile_parts = process_or_string.split(':')
 
+            self._lcu_pid = int(lockfile_parts[0])
             self._pid = int(lockfile_parts[1])
             self._port = int(lockfile_parts[2])
             self._auth_key = lockfile_parts[3]
@@ -57,12 +59,13 @@ class Connection:
         self.session = aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers)
         setattr(self, 'request', self.request)
 
+        self._connector.register_connection(self)
         tasks = [asyncio.create_task(self._connector.run_event('open', self))]
         await self._wait_api_ready()
 
         tasks.append(asyncio.create_task(self._connector.run_event('ready', self)))
         try:
-            if len(self._connector.ws.registered_uris) > 0:
+            if self._connector.should_run_ws:
                 await self.run_ws()
         except ClientConnectorError:
             logger.info('Client closed unexpectedly')
@@ -72,7 +75,7 @@ class Connection:
 
     async def _close(self):
         await self._connector.run_event('close', self)
-        self._connector.remove_connection()
+        self._connector.unregister_connection(self._lcu_pid)
         await self.session.close()
 
     @property
@@ -145,11 +148,10 @@ class Connection:
     async def request(self, method: str, endpoint: str, **kwargs):
         """Run an HTTP request against the API
 
-        :param method: HTTP method
-        :type method: str
-        :param endpoint: Request Endpoint
-        :type endpoint: str
-        :param kwargs: Arguments for `aiohttp.Request <https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.request>`_. The **data** keyworded argument will be JSON encoded automatically.
+        :param method: HTTP method :type method: str :param endpoint: Request Endpoint :type endpoint: str :param
+        kwargs: Arguments for `aiohttp.Request
+        <https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.request>`_. The **data** keyworded argument
+        will be JSON encoded automatically.
         """
         url = self._produce_url(endpoint, **kwargs)
         if kwargs.get('data'):
