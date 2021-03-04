@@ -1,5 +1,4 @@
 from lcu_driver import Connector
-import os
 
 #---------------------------------------------
 # Get Summoner Data
@@ -7,7 +6,10 @@ import os
 async def get_summoner_data(connection):
   summoner = await connection.request('GET', '/lol-summoner/v1/current-summoner')
   data = await summoner.json()
-  print(f"{data['displayName']} Lv.{data['summonerLevel']}")
+  print(f"displayName:    {summoner['displayName']}")
+  print(f"summonerId:     {summoner['summonerId']}")
+  print(f"puuid:          {summoner['puuid']}")
+  print("-")
 
 #---------------------------------------------
 # Create Lobby
@@ -29,12 +31,13 @@ async def create_lobby(connection):
     },
     'isCustom': True
   }
-  lobby = await connection.request('POST', '/lol-lobby/v2/lobby', data=custom) 
+  await connection.request('POST', '/lol-lobby/v2/lobby', data=custom) 
 
+        
 #---------------------------------------------
 # Add Team1 Bots By Champion ID
 #---------------------------------------------
-async def add_bots_t1(connection):
+async def add_bots_team1(connection):
  soraka = { 'championId':16, 'botDifficulty':'EASY', 'teamId':'100' }
  await connection.request('POST', '/lol-lobby/v1/lobby/custom/bots', data=soraka)
 
@@ -42,7 +45,7 @@ async def add_bots_t1(connection):
 #---------------------------------------------
 # Add Team2 Bots By Champion Name
 #---------------------------------------------
-async def add_bots_t2(connection):
+async def add_bots_team2(connection):
   available_bots = await connection.request('GET', '/lol-lobby/v2/lobby/custom/available-bots')
   champions = { bot['name']: bot['id'] for bot in await available_bots.json() }
   
@@ -54,16 +57,10 @@ async def add_bots_t2(connection):
 
 
 #---------------------------------------------
-# start game
-#---------------------------------------------
-async def start_game(connection):
-    await connection.request('POST', '/lol-lobby/v1/lobby/custom/start-champ-select')
-
-
-#---------------------------------------------
 #  lockfile
 #---------------------------------------------
 async def get_lockfile(connection):
+    import os
     path = os.path.join(connection.installation_path.encode('gbk').decode('utf-8'), 'lockfile')
     if os.path.isfile(path):
         file = open(path, 'r')
@@ -77,7 +74,7 @@ async def get_lockfile(connection):
 #---------------------------------------------
 # Websocket Listening
 #---------------------------------------------
-
+ 
 connector = Connector()
 
 @connector.ready
@@ -85,10 +82,8 @@ async def connect(connection):
   await get_summoner_data(connection)
   await get_lockfile(connection)
   await create_lobby(connection)
-  await add_bots_t1(connection)
-  await add_bots_t2(connection)
-  #await start_game(connection)
-
+  await add_bots_team1(connection)
+  await add_bots_team2(connection)
 
 @connector.close
 async def disconnect(connection):
