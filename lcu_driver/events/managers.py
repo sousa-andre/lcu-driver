@@ -65,6 +65,9 @@ class WebsocketEventManager(ABC):
             raise RuntimeError('every endpoint should start with backslash')
 
         def register_wrapper(coro_func):
+            if not asyncio.iscoroutinefunction(coro_func):
+                raise TypeError(f'Wrapped functions should be coroutines. Use \'async def\'.')
+            
             for event in event_types:
                 if event not in allowed_events:
                     raise RuntimeError(f'Event {event} not recognized.')
