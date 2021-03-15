@@ -16,6 +16,9 @@ class ConnectorEventManager(ABC):
         return self._handlers
 
     def _set_event(self, event_name, func_or_coro: Union[Callable, Awaitable]):
+        if not asyncio.iscoroutinefunction(func_or_coro):
+                raise TypeError(f'Annotated functions should be coroutines. Use \'async def\'.')
+        
         if event_name in self._handlers:
             self.handlers[event_name].append(func_or_coro)
         else:
@@ -65,6 +68,9 @@ class WebsocketEventManager(ABC):
             raise RuntimeError('every endpoint should start with backslash')
 
         def register_wrapper(coro_func):
+            if not asyncio.iscoroutinefunction(coro_func):
+                raise TypeError(f'Annotated functions should be coroutines. Use \'async def\'.')
+            
             for event in event_types:
                 if event not in allowed_events:
                     raise RuntimeError(f'Event {event} not recognized.')
