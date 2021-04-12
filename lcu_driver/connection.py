@@ -9,6 +9,7 @@ from psutil import Process
 
 from .exceptions import EarlyPerform
 from .utils import parse_cmdline_args
+from .loop import LoopSensitiveManager
 
 logger = logging.getLogger('lcu-driver')
 
@@ -23,7 +24,6 @@ class Connection:
     """
     def __init__(self, connector, process_or_string: Union[Process, str]):
         self._connector = connector
-        self.session = None
         self._ws = None
         self.locals = {}
 
@@ -51,12 +51,16 @@ class Connection:
             self._auth_key = lockfile_parts[3]
             self._installation_path = None
 
+        self.session = LoopSensitiveManager(
+            factory=lambda: aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers),
+            callback=lambda x: x.close(),
+        )
+
     async def init(self):
         """Initialize the connection. It's called by the connector when it finds a connection
 
         :rtype: none
         """
-        self.session = aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers)
         setattr(self, 'request', self.request)
 
         self._connector.register_connection(self)
@@ -156,7 +160,8 @@ class Connection:
         url = self._produce_url(endpoint, **kwargs)
         if kwargs.get('data'):
             kwargs['data'] = dumps(kwargs['data'])
-        return await self.session.request(method, url, verify_ssl=False, **kwargs)
+        session = await self.session.get()
+        return session.request(method, url, verify_ssl=False, **kwargs)
 
     async def run_ws(self):
         """Start the websoocket connection. This is responsible to raise Connector close event and
