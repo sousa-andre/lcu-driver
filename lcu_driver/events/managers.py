@@ -65,7 +65,7 @@ class WebsocketEventManager(ABC):
         allowed_events = ('CREATE', 'UPDATE', 'DELETE',)
 
         if not uri.startswith('/'):
-            raise RuntimeError('every endpoint should start with backslash')
+            raise RuntimeError('every endpoint should start with a forward slash')
 
         def register_wrapper(coro_func):
             if not asyncio.iscoroutinefunction(coro_func):
