@@ -26,6 +26,7 @@ class Connection:
         self._connector = connector
         self._ws = None
         self.locals = {}
+        self.closed = False
 
         self._headers = {
             'Content-Type': 'application/json',
@@ -78,6 +79,7 @@ class Connection:
             await self._close()
 
     async def _close(self):
+        self.closed = True
         await self._connector.run_event('close', self)
         self._connector.unregister_connection(self._lcu_pid)
         await self.session.close()
@@ -176,7 +178,7 @@ class Connection:
         await self._ws.send_json([5, 'OnJsonApiEvent'])
         _ = await self._ws.receive()
 
-        while True:
+        while self.closed == False:
             msg = await self._ws.receive()
             logger.debug('Websocket frame received')
 
@@ -189,7 +191,7 @@ class Connection:
 
             elif msg.type == aiohttp.WSMsgType.CLOSED:
                 break
-
+        await self._ws.close()
         await local_session.close()
 
     async def _wait_api_ready(self) -> None:
