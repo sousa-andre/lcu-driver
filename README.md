@@ -2,6 +2,8 @@
 
 lcu-driver is a library made to communicate with League of Legends Client API in a easy way. It provides an API capable of handling LCU connection status and websockets events for you and prepare HTTP requests to be used directly with endpoints. Inspired in [lcu-connector](https://github.com/Pupix/lcu-connector). It has been tested on Windows, Linux and MacOS.
 
+If you don't feel like using lcu-driver or it doesn't suit your needs, I recommend trying [Willump](https://github.com/elliejs/Willump). Willump is an amazing and simple alternative to this library.
+
 <p>
     <a href="">
         <img src="https://img.shields.io/pypi/v/lcu-driver?style=for-the-badge" alt="PyPi">
