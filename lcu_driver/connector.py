@@ -77,6 +77,8 @@ class Connector(BaseConnector):
         :rtype: None
         """
         self._repeat_flag = False
+        if self.connection is not None:
+            await self.connection._close()
 
 
 class MultipleClientConnector(BaseConnector):
