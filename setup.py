@@ -1,6 +1,6 @@
 from setuptools import setup
 
-__version__ = '3.0.0a1'
+__version__ = '3.0.0a2'
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
@@ -15,7 +15,7 @@ setup(
     url='https://github.com/sousa-andre/lcu-driver/',
     long_description_content_type='text/markdown',
     long_description=long_description,
-    packages=['lcu_driver', 'lcu_driver.events'],
+    packages=['lcu_driver', 'lcu_driver.events', 'lcu_driver.connection'],
     install_requires=[
         'aiohttp',
         'psutil'

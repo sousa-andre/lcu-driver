@@ -8,12 +8,15 @@ connector = Connector()
 async def connect(connection):
     print('LCU API is ready to be used.')
 
+    await connection.stop()
+    await connector.stop_search()
+
 
 # fired when League Client is closed (or disconnected from websocket)
 @connector.close
 async def disconnect(_):
     print('The client have been closed!')
-    await connector.stop()
+    # await connector.stop_search()
 
 
 # subscribe to '/lol-summoner/v1/current-summoner' endpoint for the UPDATE event
@@ -24,4 +27,5 @@ async def icon_changed(connection, event):
 
 
 # starts the connector
+print('connection start')
 connector.start()

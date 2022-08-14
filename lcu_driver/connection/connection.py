@@ -1,15 +1,14 @@
 import asyncio
 import logging
 from json import loads, JSONDecodeError, dumps
-from typing import Union, Optional, Tuple
+from typing import Optional, Tuple
 
 import aiohttp
 from aiohttp import ClientConnectorError
-from psutil import Process
 
-from .exceptions import EarlyPerform
-from .utils import parse_cmdline_args
-from .loop import LoopSensitiveManager
+from .connection_options import ConnectionOptions
+from lcu_driver.exceptions import EarlyPerform
+from lcu_driver.loop import LoopSensitiveManager
 
 logger = logging.getLogger('lcu-driver')
 
@@ -19,10 +18,9 @@ class Connection:
 
     :param connector: Connector instance where connection should look for events handlers
     :type connector: :py:obj:`lcu_driver.connector.Connector`
-    :param process_or_string: :py:obj:`psutil.Process` object or lockfile string
-    :type process_or_string: :py:obj:`psutil.Process` or string
+    :param options: :py:obj:`lcu_driver.connection_options.ConnectionOptions` object or lockfile string
     """
-    def __init__(self, connector, process_or_string: Union[Process, str]):
+    def __init__(self, connector, options: ConnectionOptions):
         self._connector = connector
         self._ws = None
         self.locals = {}
@@ -34,23 +32,11 @@ class Connection:
         }
 
         self._protocols = ('https', 'wss',)
-        if isinstance(process_or_string, Process):
-            process_args = parse_cmdline_args(process_or_string.cmdline())
 
-            self._lcu_pid = process_or_string.pid
-            self._pid = int(process_args['app-pid'])
-            self._port = int(process_args['app-port'])
-            self._auth_key = process_args['remoting-auth-token']
-            self._installation_path = process_args['install-directory']
-
-        elif isinstance(process_or_string, str):
-            lockfile_parts = process_or_string.split(':')
-
-            self._lcu_pid = int(lockfile_parts[0])
-            self._pid = int(lockfile_parts[1])
-            self._port = int(lockfile_parts[2])
-            self._auth_key = lockfile_parts[3]
-            self._installation_path = None
+        self._lcu_pid = int(options.lcu_pid)
+        self._port = int(options.port)
+        self._auth_key = options.auth_key
+        self._installation_path = options.extras['installation_path']
 
         self.session = LoopSensitiveManager(
             factory=lambda: aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers),
@@ -77,6 +63,9 @@ class Connection:
         finally:
             await asyncio.gather(*tasks)
             await self._close()
+
+    async def stop(self):
+        self.closed = True
 
     async def _close(self):
         self.closed = True
@@ -178,7 +167,7 @@ class Connection:
         await self._ws.send_json([5, 'OnJsonApiEvent'])
         _ = await self._ws.receive()
 
-        while self.closed == False:
+        while self.closed is False:
             msg = await self._ws.receive()
             logger.debug('Websocket frame received')
 

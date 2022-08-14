@@ -1,11 +1,11 @@
 import asyncio
 import logging
-import time
 from abc import ABC, abstractmethod
 
-from .connection import Connection
-from .events.managers import ConnectorEventManager, WebsocketEventManager
-from .utils import _return_ux_process
+from lcu_driver.connection.connection import Connection
+from lcu_driver.connection.connection_options import get_connection_options_from_ux
+from lcu_driver.events.managers import ConnectorEventManager, WebsocketEventManager
+from lcu_driver.utils import _return_ux_process
 
 logger = logging.getLogger('lcu-driver')
 
@@ -32,53 +32,47 @@ class BaseConnector(ConnectorEventManager, ABC):
 
 
 class Connector(BaseConnector):
+    def register_connection(self, connection: Connection):
+        pass
+
+    def unregister_connection(self, lcu_pid):
+        pass
+
     def __init__(self, *, loop=None):
         super().__init__(loop)
-        self._repeat_flag = True
-        self.connection = None
-
-    def register_connection(self, connection):
-        self.connection = connection
-
-    def unregister_connection(self, _):
-        self.connection = None
+        self._keep_searching_for_clients = True
+        self.__first_client_found = True
+        self.loop = loop or asyncio.get_event_loop()
+        self.ws = WebsocketEventManager()
 
     @property
     def should_run_ws(self) -> bool:
         return len(self.ws.registered_uris) > 0
 
-    def start(self) -> None:
+    async def _a_start(self) -> None:
         """Starts the connector. This method should be overridden if different behavior is required.
 
         :rtype: None
         """
         try:
-            def wrapper():
-                process = next(_return_ux_process(), None)
-                while not process:
-                    process = next(_return_ux_process(), None)
-                    time.sleep(0.5)
+            while self._keep_searching_for_clients:
+                connection_opts = await get_connection_options_from_ux()
+                if connection_opts is not None:
+                    connection = Connection(self, connection_opts)
+                    await connection.init()
 
-                connection = Connection(self, process)
-                self.register_connection(connection)
-                self.loop.run_until_complete(connection.init())
-
-                if self._repeat_flag and len(self.ws.registered_uris) > 0:
-                    logger.debug('Repeat flag=True. Looking for new clients.')
-                    wrapper()
-
-            wrapper()
         except KeyboardInterrupt:
             logger.info('Event loop interrupted by keyboard')
 
-    async def stop(self) -> None:
+    def start(self):
+        self.loop.run_until_complete(self._a_start())
+
+    async def stop_search(self) -> None:
         """Flag the connector to don't look for more clients once the connection finishes his job.
 
         :rtype: None
         """
-        self._repeat_flag = False
-        if self.connection is not None:
-            await self.connection._close()
+        self._keep_searching_for_clients = False
 
 
 class MultipleClientConnector(BaseConnector):
