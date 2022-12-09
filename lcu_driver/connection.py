@@ -9,7 +9,6 @@ from psutil import Process
 
 from .exceptions import EarlyPerform
 from .utils import parse_cmdline_args
-from .loop import LoopSensitiveManager
 
 logger = logging.getLogger('lcu-driver')
 
@@ -27,6 +26,7 @@ class Connection:
         self._ws = None
         self.locals = {}
         self.closed = False
+        self.session = None
 
         self._headers = {
             'Content-Type': 'application/json',
@@ -52,16 +52,13 @@ class Connection:
             self._auth_key = lockfile_parts[3]
             self._installation_path = None
 
-        self.session = LoopSensitiveManager(
-            factory=lambda: aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers),
-            callback=lambda x: x.close(),
-        )
-
     async def init(self):
         """Initialize the connection. It's called by the connector when it finds a connection
 
         :rtype: none
         """
+        self.session = aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers)
+
         setattr(self, 'request', self.request)
 
         self._connector.register_connection(self)
@@ -69,6 +66,7 @@ class Connection:
         await self._wait_api_ready()
 
         tasks.append(asyncio.create_task(self._connector.run_event('ready', self)))
+
         try:
             if self._connector.should_run_ws:
                 await self.run_ws()
@@ -162,8 +160,7 @@ class Connection:
         url = self._produce_url(endpoint, **kwargs)
         if kwargs.get('data'):
             kwargs['data'] = dumps(kwargs['data'])
-        session = await self.session.get()
-        return session.request(method, url, verify_ssl=False, **kwargs)
+        return await self.session.request(method, url, verify_ssl=False, **kwargs)
 
     async def run_ws(self):
         """Start the websoocket connection. This is responsible to raise Connector close event and
