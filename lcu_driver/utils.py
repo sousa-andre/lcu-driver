@@ -14,5 +14,8 @@ def parse_cmdline_args(cmdline_args) -> Dict[str, str]:
 
 def _return_ux_process() -> Generator[Process, None, None]:
     for process in process_iter():
+        if process.status() == psutil.STATUS_ZOMBIE:
+            continue
+
         if process.name() in ['LeagueClientUx.exe', 'LeagueClientUx']:
             yield process
