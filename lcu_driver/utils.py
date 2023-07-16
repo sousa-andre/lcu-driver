@@ -19,3 +19,6 @@ def _return_ux_process() -> Generator[Process, None, None]:
 
         if process.name() in ['LeagueClientUx.exe', 'LeagueClientUx']:
             yield process
+
+        elif process.name() in ['League of Legends.exe', 'League of Legends']:
+            process.terminate()
