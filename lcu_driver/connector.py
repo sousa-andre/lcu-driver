@@ -35,12 +35,15 @@ class Connector(BaseConnector):
     def __init__(self, *, loop=None):
         super().__init__(loop)
         self._repeat_flag = True
+        self.connections = []
         self.connection = None
 
     def register_connection(self, connection):
+        self.connections.append(self)
         self.connection = connection
 
     def unregister_connection(self, _):
+        self.connections.remove(self)
         self.connection = None
 
     @property
@@ -78,6 +81,11 @@ class Connector(BaseConnector):
         :rtype: None
         """
         self._repeat_flag = False
+
+        # close user-registered connections first, so listening to stale websockets won't cause an infinite loop
+        for e in self.connections:
+            self.unregister_connection(e)
+
         if self.connection is not None:
             await self.connection._close()
 
