@@ -35,18 +35,12 @@ class Connector(BaseConnector):
     def __init__(self, *, loop=None):
         super().__init__(loop)
         self._repeat_flag = True
-        self.connections = []
         self.connection = None
 
     def register_connection(self, connection):
-        self.connections.append(self)
         self.connection = connection
 
     def unregister_connection(self, _):
-        try:
-            self.connections.remove(self)
-        except ValueError:
-            pass
         self.connection = None
 
     @property
@@ -84,11 +78,6 @@ class Connector(BaseConnector):
         :rtype: None
         """
         self._repeat_flag = False
-
-        # close user-registered connections first, so listening to stale websockets won't cause an infinite loop
-        for e in self.connections:
-            self.unregister_connection(e)
-
         if self.connection is not None:
             await self.connection._close()
 
@@ -97,6 +86,7 @@ class MultipleClientConnector(BaseConnector):
     def __init__(self, *, loop=None):
         super().__init__(loop=loop)
         self.connections = []
+        self.stop_event = asyncio.Event()  # Event to signal stop
 
     def register_connection(self, connection):
         self.connections.append(connection)
@@ -119,7 +109,7 @@ class MultipleClientConnector(BaseConnector):
     async def _astart(self):
         tasks = []
         try:
-            while True:
+            while not self.stop_event.is_set():
                 process_iter = _return_ux_process()
 
                 process = next(process_iter, None)
@@ -136,5 +126,10 @@ class MultipleClientConnector(BaseConnector):
         finally:
             await asyncio.gather(*tasks)
 
+    async def stop(self):
+        self.stop_event.set()
+
     def start(self) -> None:
+        self.stop_event.clear()  # Reset the stop event state
         self.loop.run_until_complete(self._astart())
+
