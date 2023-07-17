@@ -125,11 +125,12 @@ class MultipleClientConnector(BaseConnector):
             logger.info('Event loop interrupted by keyboard')
         finally:
             await asyncio.gather(*tasks)
+            await self.stop()
 
     async def stop(self):
         self.stop_event.set()
 
     def start(self) -> None:
-        self.stop_event.clear()  # Reset the stop event state
+        self.stop_event.clear() # Reset the stop event state
         self.loop.run_until_complete(self._astart())
 
