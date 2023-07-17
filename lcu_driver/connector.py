@@ -43,7 +43,10 @@ class Connector(BaseConnector):
         self.connection = connection
 
     def unregister_connection(self, _):
-        self.connections.remove(self)
+        try:
+            self.connections.remove(self)
+        except ValueError:
+            pass
         self.connection = None
 
     @property
