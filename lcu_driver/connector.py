@@ -2,6 +2,8 @@ import asyncio
 import logging
 import time
 import unicodedata
+import pandas as pd
+import shutil
 from wcwidth import wcswidth
 from abc import ABC, abstractmethod
 
@@ -59,6 +61,44 @@ class Connector(BaseConnector):
             def count_nonASCII(s: str): #统计一个字符串中占用命令行2个宽度单位的字符个数（Count the number of characters that take up 2 width unit in CMD）
                 return sum([unicodedata.east_asian_width(character) in ("F", "W") for character in list(str(s))])
             
+            def format_df(df: pd.DataFrame): #按照每列最长字符串的命令行宽度加上2，再根据每个数据的中文字符数量决定最终格式化输出的字符串宽度（Get the width of the longest string of each column, add it by 2, and substract it by the number of each cell string's Chinese characters to get the final width for each cell to print using `format` function）
+                maxLens = {}
+                maxWidth = shutil.get_terminal_size()[0]
+                fields = df.columns.tolist()
+                for field in fields:
+                    maxLens[field] = max(max(map(lambda x: wcswidth(str(x)), df[field])), wcswidth(str(field))) + 2
+                if sum(maxLens.values()) + 2 * (len(fields) - 1) > maxWidth: #因为输出的时候，相邻两列之间需要有两个空格分隔，所以在计算总宽度的时候必须算上这些空格的宽度（Because two spaces are used between each pair of columns, the width they take up must be taken into consideration）
+                    print("单行数据字符串输出宽度超过当前终端窗口宽度！是否继续？（输入任意键继续，否则直接打印该数据框。）\nThe output width of each record string exceeds the current width of the terminal window! Continue? (Input anything to continue, or null to directly print this dataframe.)")
+                    if input() == "":
+                        #print(df)
+                        result = str(df)
+                        return (result, maxLens)
+                result = ""
+                for i in range(df.shape[1]):
+                    field = fields[i]
+                    tmp = "{0:^{w}}".format(field, w = maxLens[str(field)] - count_nonASCII(str(field)))
+                    result += tmp
+                    #print(tmp, end = "")
+                    if i != df.shape[1] - 1:
+                            result += "  "
+                        #print("  ", end = "")
+                result += "\n"
+                #print()
+                for i in range(df.shape[0]):
+                    for j in range(df.shape[1]):
+                        field = fields[j]
+                        cell = df[field][i]
+                        tmp = "{0:^{w}}".format(cell, w = maxLens[field] - count_nonASCII(str(cell)))
+                        result += tmp
+                        #print(tmp, end = "")
+                        if j != df.shape[1] - 1:
+                            result += "  "
+                            #print("  ", end = "")
+                    if i != df.shape[0] - 1:
+                        result += "\n"
+                    #print() #注意这里的缩进和上一行不同（Note that here the indentation is different from the last line）
+                return (result, maxLens)
+            
             def wrapper():
                 process_iter = []
                 retry = 0
@@ -69,15 +109,15 @@ class Connector(BaseConnector):
                     retry += 1
                 if len(process_iter) > 1:
                     print("检测到您运行了多个客户端。请选择您需要操作的客户端进程：\nDetected multiple clients running. Please select a client process:")
-                    lens = {"No.": max(max(map(lambda x: wcswidth(str(x)), range(len(process_iter)))), wcswidth("No."), wcswidth("序号")) + 2, "pid": max(max(map(lambda x: wcswidth(str(x.pid)), process_iter)), wcswidth("pid"), wcswidth("进程序号")) + 2, "filePath": max(max(map(lambda x: wcswidth(x.cmdline()[0]), process_iter)), wcswidth("filePath"), wcswidth("进程文件路径")) + 2, "createTime": max(max(map(lambda x: wcswidth(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(x.create_time()))), process_iter)), wcswidth("createTime"), wcswidth("进程创建时间")) + 2, "status": max(max(map(lambda x: wcswidth(x.status()), process_iter)), wcswidth("status"), wcswidth("状态")) + 2}
-                    print("{0:^{w0}}  {1:^{w1}}  {2:^{w2}}  {3:^{w3}}  {4:^{w4}}".format("No.", "pid", "filePath", "createTime", "status", w0 = lens["No."] - count_nonASCII("No."), w1 = lens["pid"] - count_nonASCII("pid"), w2 = lens["filePath"] - count_nonASCII("filePath"), w3 = lens["createTime"] - count_nonASCII("createTime"), w4 = lens["status"] - count_nonASCII("status")))
-                    print("{0:^{w0}}  {1:^{w1}}  {2:^{w2}}  {3:^{w3}}  {4:^{w4}}".format("序号", "进程序号", "进程文件路径", "进程创建时间", "状态", w0 = lens["No."] - count_nonASCII("状态"), w1 = lens["pid"] - count_nonASCII("进程序号"), w2 = lens["filePath"] - count_nonASCII("进程文件路径"), w3 = lens["createTime"] - count_nonASCII("进程创建时间"), w4 = lens["status"] - count_nonASCII("状态")))
+                    process_dict = {"No.": ["序号"], "pid": ["进程序号"], "filePath": ["进程文件路径"], "createTime": ["进程创建时间"], "status": ["状态"]}
                     for i in range(len(process_iter)):
-                        pid = process_iter[i].pid
-                        filePath = process_iter[i].cmdline()[0]
-                        createTime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(process_iter[i].create_time()))
-                        status = process_iter[i].status()
-                        print("{0:^{w0}}  {1:^{w1}}  {2:^{w2}}  {3:^{w3}}  {4:^{w4}}".format(i + 1, pid, filePath, createTime, status, w0 = lens["No."] - count_nonASCII(i + 1), w1 = lens["pid"] - count_nonASCII(pid), w2 = lens["filePath"] - count_nonASCII(filePath), w3 = lens["createTime"] - count_nonASCII(createTime), w4 = lens["status"] - count_nonASCII(status)))
+                        process_dict["No."].append(i + 1)
+                        process_dict["pid"].append(process_iter[i].pid)
+                        process_dict["filePath"].append(process_iter[i].cmdline()[0])
+                        process_dict["createTime"].append(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(process_iter[i].create_time())))
+                        process_dict["status"].append(process_iter[i].status())
+                    process_df = pd.DataFrame(process_dict)
+                    print(format_df(process_df)[0])
                     while True:
                         processIndex = input()
                         if processIndex == "":
