@@ -19,3 +19,7 @@ class InvalidURI(BaseException):
     def __init__(self, error_type, used_uri=None):
         if error_type == 'backslash':
             super().__init__(f'every endpoint must start with a backslash, replace {used_uri} by /{used_uri}')
+
+
+class NoLeagueClientDetected(BaseException):
+    pass
