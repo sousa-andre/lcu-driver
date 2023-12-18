@@ -17,5 +17,5 @@ def _return_ux_process() -> Generator[Process, None, None]:
         if process.status() == STATUS_ZOMBIE:
             continue
 
-        if process.name() in ['LeagueClientUx.exe', 'LeagueClientUx']:
+        if process.name() in ['LeagueClientUx.exe', 'LeagueClientUx', 'CrBrowserMain']:
             yield process
