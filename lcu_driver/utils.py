@@ -1,6 +1,6 @@
-from typing import Dict, Generator
+from typing import Dict, Generator, List
 
-from psutil import process_iter, Process, STATUS_ZOMBIE
+from psutil import STATUS_ZOMBIE, AccessDenied, NoSuchProcess, Process, process_iter
 
 
 def parse_cmdline_args(cmdline_args) -> Dict[str, str]:
@@ -13,9 +13,18 @@ def parse_cmdline_args(cmdline_args) -> Dict[str, str]:
 
 
 def _return_ux_process() -> Generator[Process, None, None]:
-    for process in process_iter():
-        if process.status() == STATUS_ZOMBIE:
-            continue
+    for process in process_iter(attrs=["cmdline"]):
+        try:
+            if process.status() == STATUS_ZOMBIE:
+                continue
 
-        if process.name() in ['LeagueClientUx.exe', 'LeagueClientUx', 'CrBrowserMain']:
-            yield process
+            cmdline: List[str] = process.info.get("cmdline", [])
+
+            if process.name() in ["LeagueClientUx.exe", "LeagueClientUx"]:
+                yield process
+
+            if cmdline and cmdline[0].endswith("LeagueClientUx.exe"):
+                yield process
+
+        except (NoSuchProcess, AccessDenied):
+            pass
