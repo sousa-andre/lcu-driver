@@ -1,6 +1,6 @@
 from setuptools import setup
 
-__version__ = '3.0.0'
+__version__ = '3.0.1'
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
