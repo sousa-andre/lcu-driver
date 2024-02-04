@@ -102,7 +102,7 @@ class Connector(BaseConnector):
             def wrapper():
                 process_iter = []
                 retry = 0
-                while retry < 10: #默认一台机器上运行不超过10个客户端。主要是想要达到修改库文件之前立刻就能进入正式程序的效果，特别是当实际上只有一个客户端在运行时（Basically, a device can't run more than 10 League Clients. The reason for setting this standard so small is to achieve the immediate connection to LeagueClientUX, especially when there's only one client running in fact (imagine the program has to check for many times when it'll find only one client running)）
+                while retry < 100: #默认一台机器上运行不超过100个客户端。主要是想要达到修改库文件之前立刻就能进入正式程序的效果，特别是当实际上只有一个客户端在运行时（Basically, a device can't run more than 100 League Clients. The reason for setting this standard so small is to achieve the immediate connection to LeagueClientUX, especially when there's only one client running in fact (imagine the program has to check for many times when it'll find only one client running)）
                     process = next(_return_ux_process(processList = process_iter), None)
                     if process and not process in process_iter:
                         process_iter.append(process)
@@ -132,7 +132,7 @@ class Connector(BaseConnector):
                                 break
                             else:
                                 print("请输入不超过%d的正整数！\nPlease input an integer not greater than %d!" %(len(process_iter), len(process_iter)))
-                elif len(process_iter) == 1: #如果没有后面两个部分，那么在经过10次寻找进程后，由于process_iter中已经包含了所有符合要求的进程，process将成为None，从而导致self.loop.run_until_complete(connection.init())出现self中无_auth_keys的报错（If the following parts don't exist, then after 10 times of searching for the demanding process, since `process_iter` has included all the corresponding processes, `process` will become `None`, which causes an AttributeError that 'Connection' object has no attribute '_auth_key'）
+                elif len(process_iter) == 1: #如果没有后面两个部分，那么在经过100次寻找进程后，由于process_iter中已经包含了所有符合要求的进程，process将成为None，从而导致self.loop.run_until_complete(connection.init())出现self中无_auth_keys的报错（If the following parts don't exist, then after 100 times of searching for the demanding process, since `process_iter` has included all the corresponding processes, `process` will become `None`, which causes an AttributeError that 'Connection' object has no attribute '_auth_key'）
                     process = process_iter[0]
                 else:
                     raise NoLeagueClientDetected("The program didn't detect a running League Client.")
