@@ -100,13 +100,7 @@ class Connector(BaseConnector):
                 return (result, maxLens)
             
             def wrapper():
-                process_iter = []
-                retry = 0
-                while retry < 100: #默认一台机器上运行不超过100个客户端。主要是想要达到修改库文件之前立刻就能进入正式程序的效果，特别是当实际上只有一个客户端在运行时（Basically, a device can't run more than 100 League Clients. The reason for setting this standard so small is to achieve the immediate connection to LeagueClientUX, especially when there's only one client running in fact (imagine the program has to check for many times when it'll find only one client running)）
-                    process = next(_return_ux_process(processList = process_iter), None)
-                    if process and not process in process_iter:
-                        process_iter.append(process)
-                    retry += 1
+                process_iter = _return_ux_process()
                 if len(process_iter) > 1:
                     print("检测到您运行了多个客户端。请选择您需要操作的客户端进程：\nDetected multiple clients running. Please select a client process:")
                     process_dict = {"No.": ["序号"], "pid": ["进程序号"], "filePath": ["进程文件路径"], "createTime": ["进程创建时间"], "status": ["状态"]}

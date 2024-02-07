@@ -12,7 +12,9 @@ def parse_cmdline_args(cmdline_args) -> Dict[str, str]:
     return cmdline_args_parsed
 
 
-def _return_ux_process(processList: list = []) -> Generator[Process, None, None]:
+def _return_ux_process() -> Generator[Process, None, None]:
+    processList = []
     for process in process_iter():
-        if process.name() in ['LeagueClientUx.exe', 'LeagueClientUx'] and not process in processList:
-            yield process
+        if process.name() in ['LeagueClientUx.exe', 'LeagueClientUx']:
+            processList.append(process)
+    return processList
