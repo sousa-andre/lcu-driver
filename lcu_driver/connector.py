@@ -62,6 +62,7 @@ class Connector(BaseConnector):
                 return sum([unicodedata.east_asian_width(character) in ("F", "W") for character in list(str(s))])
             
             def format_df(df: pd.DataFrame): #按照每列最长字符串的命令行宽度加上2，再根据每个数据的中文字符数量决定最终格式化输出的字符串宽度（Get the width of the longest string of each column, add it by 2, and substract it by the number of each cell string's Chinese characters to get the final width for each cell to print using `format` function）
+                df = df.reset_index(drop = True) #这一步至关重要，因为下面的操作前提是行号是默认的（This step is crucial, for the following operations are based on the dataframe with the default row index）
                 maxLens = {}
                 maxWidth = shutil.get_terminal_size()[0]
                 fields = df.columns.tolist()
@@ -102,8 +103,9 @@ class Connector(BaseConnector):
             def wrapper():
                 process_iter = _return_ux_process()
                 if len(process_iter) > 1:
-                    print("检测到您运行了多个客户端。请选择您需要操作的客户端进程：\nDetected multiple clients running. Please select a client process:")
+                    print("检测到您运行了多个客户端。请选择您需要操作的客户端进程：（默认选择最近的进程）\nDetected multiple clients running. Please select a client process: (The latest process by default)")
                     process_dict = {"No.": ["序号"], "pid": ["进程序号"], "filePath": ["进程文件路径"], "createTime": ["进程创建时间"], "status": ["状态"]}
+                    #process_header_df = pd.DataFrame(process_dict)
                     for i in range(len(process_iter)):
                         process_dict["No."].append(i + 1)
                         process_dict["pid"].append(process_iter[i].pid)
@@ -112,10 +114,18 @@ class Connector(BaseConnector):
                         process_dict["status"].append(process_iter[i].status())
                     process_df = pd.DataFrame(process_dict)
                     print(format_df(process_df)[0])
+                    running_process_df = process_df[process_df.status == "running"].sort_values(by = ["createTime"], ascending = False)
                     while True:
                         processIndex = input()
                         if processIndex == "":
-                            continue
+                            if len(running_process_df) == 0:
+                                print("无活动英雄联盟客户端进程。程序即将退出！\nNo active LeagueClientUx process! The program will exit now!")
+                                time.sleep(2)
+                                exit(1)
+                            else:
+                                print("已选择最近创建的英雄联盟客户端进程。\nSelected the recently created LeagueClientUx process.")
+                                processIndex = running_process_df.iat[0, 0]
+                                print(format_df(process_df.iloc[[0, processIndex]])[0], end = "\n\n")
                         try:
                             processIndex = int(processIndex)
                         except ValueError:
