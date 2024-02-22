@@ -3,7 +3,7 @@ import logging
 import time
 import unicodedata
 import pandas as pd
-import shutil
+import shutil, psutil
 from wcwidth import wcswidth
 from abc import ABC, abstractmethod
 
@@ -109,7 +109,10 @@ class Connector(BaseConnector):
                     for i in range(len(process_iter)):
                         process_dict["No."].append(i + 1)
                         process_dict["pid"].append(process_iter[i].pid)
-                        process_dict["filePath"].append(process_iter[i].cmdline()[0])
+                        try:
+                            process_dict["filePath"].append(process_iter[i].cmdline()[0])
+                        except psutil.AccessDenied: #有时进程处于“已挂起”状态时，会无法访问Process类的cmdline、cwd、environ等方法（Sometimes when a process is suspended, attributes of a Process object, like `cmdline`, `cwd`, `environ`, etc., can't be accessed）
+                            process_dict["filePath"].append(process_iter[i].exe())
                         process_dict["createTime"].append(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(process_iter[i].create_time())))
                         process_dict["status"].append(process_iter[i].status())
                     process_df = pd.DataFrame(process_dict)
