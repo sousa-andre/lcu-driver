@@ -86,6 +86,7 @@ class MultipleClientConnector(BaseConnector):
     def __init__(self, *, loop=None):
         super().__init__(loop=loop)
         self.connections = []
+        self.stop_event = asyncio.Event()  # Event to signal stop
 
     def register_connection(self, connection):
         self.connections.append(connection)
@@ -108,7 +109,7 @@ class MultipleClientConnector(BaseConnector):
     async def _astart(self):
         tasks = []
         try:
-            while True:
+            while not self.stop_event.is_set():
                 process_iter = _return_ux_process()
 
                 process = next(process_iter, None)
@@ -124,6 +125,12 @@ class MultipleClientConnector(BaseConnector):
             logger.info('Event loop interrupted by keyboard')
         finally:
             await asyncio.gather(*tasks)
+            await self.stop()
+
+    async def stop(self):
+        self.stop_event.set()
 
     def start(self) -> None:
+        self.stop_event.clear() # Reset the stop event state
         self.loop.run_until_complete(self._astart())
+

@@ -187,7 +187,7 @@ class Connection:
                     data = loads(msg.data)[2]
                     self._connector.ws.match_event(self._connector, self, data)
                 except JSONDecodeError:
-                    logger.warning('Error decoding the following JSON: ', msg.data)
+                    logger.warning(f'Error decoding the following JSON: {msg.data}')
 
             elif msg.type == aiohttp.WSMsgType.CLOSED:
                 break
