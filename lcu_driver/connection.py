@@ -78,8 +78,8 @@ class Connection:
 
     async def _close(self):
         self.closed = True
-        await self._connector.run_event('close', self)
         self._connector.unregister_connection(self._lcu_pid)
+        await self._connector.run_event('close', self)
         await self.session.close()
 
     @property
