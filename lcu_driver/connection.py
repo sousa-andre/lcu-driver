@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import logging
 from json import loads, JSONDecodeError, dumps
 from typing import Union, Optional, Tuple
@@ -42,6 +43,9 @@ class Connection:
             self._port = int(process_args['app-port'])
             self._auth_key = process_args['remoting-auth-token']
             self._installation_path = process_args['install-directory']
+            auth_string = f"riot:{self._auth_key}"
+            encoded_auth = base64.b64encode(auth_string.encode()).decode()
+            self._headers['Authorization'] = f"Basic {encoded_auth}"
 
         elif isinstance(process_or_string, str):
             lockfile_parts = process_or_string.split(':')
@@ -51,13 +55,16 @@ class Connection:
             self._port = int(lockfile_parts[2])
             self._auth_key = lockfile_parts[3]
             self._installation_path = None
+            auth_string = f"riot:{self._auth_key}"
+            encoded_auth = base64.b64encode(auth_string.encode()).decode()
+            self._headers['Authorization'] = f"Basic {encoded_auth}"
 
     async def init(self):
         """Initialize the connection. It's called by the connector when it finds a connection
 
         :rtype: none
         """
-        self.session = aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers)
+        self.session = aiohttp.ClientSession(headers=self._headers)
 
         setattr(self, 'request', self.request)
 
@@ -160,7 +167,7 @@ class Connection:
         url = self._produce_url(endpoint, **kwargs)
         if kwargs.get('data'):
             kwargs['data'] = dumps(kwargs['data'])
-        return await self.session.request(method, url, verify_ssl=False, **kwargs)
+        return await self.session.request(method, url, ssl=False, **kwargs)
 
     async def run_ws(self):
         """Start the websoocket connection. This is responsible to raise Connector close event and
@@ -198,7 +205,7 @@ class Connection:
         while True:
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(f'{self.address}/riotclient/region-locale', verify_ssl=False) as _:
+                    async with session.get(f'{self.address}/riotclient/region-locale', ssl=False) as _:
                         break
             except aiohttp.client_exceptions.ClientConnectorError:
                 pass

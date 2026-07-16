@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 from abc import ABC
 from typing import Union, Callable, Awaitable, Iterable
 
@@ -16,7 +17,7 @@ class ConnectorEventManager(ABC):
         return self._handlers
 
     def _set_event(self, event_name, func_or_coro: Union[Callable, Awaitable]):
-        if not asyncio.iscoroutinefunction(func_or_coro):
+        if not inspect.iscoroutinefunction(func_or_coro):
                 raise TypeError(f'Annotated functions should be coroutines. Use \'async def\'.')
         
         if event_name in self._handlers:
