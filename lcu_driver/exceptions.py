@@ -20,6 +20,6 @@ class InvalidURI(BaseException):
         if error_type == 'backslash':
             super().__init__(f'every endpoint must start with a backslash, replace {used_uri} by /{used_uri}')
 
-class NoLeagueClientDetected(BaseException):
+class NoClientUxDetected(BaseException):
     def __init__(self):
-        super().__init__("The program didn't detect a running League Client.")
+        super().__init__("The program didn't detect a running League Client or TFT Client.")

@@ -7,18 +7,18 @@ from psutil import Process # Type annotation only
 from .connection import Connection
 from .events.managers import ConnectorEventManager, WebsocketEventManager
 from .utils import _return_ux_process
-from .exceptions import NoLeagueClientDetected # Handles one case of the number of League Clients
+from .exceptions import NoClientUxDetected # Handles one case of the number of Client Ux processes
 
 logger = logging.getLogger('lcu-driver')
 
-def chooseClient(processList: list[Process]): # Allows users to select one running League Client
+def chooseClient(processList: list[Process]): # Allows users to select one running Ux Client
     if isinstance(processList, list) and all(map(lambda x: isinstance(x, Process), processList)):
         if len(processList) == 0:
-            raise NoLeagueClientDetected()
+            raise NoClientUxDetected()
         elif len(processList) == 1:
             process = processList[0]
         else:
-            print('Multiple League Clients are detected. Please select one process to continue: (Submit "0" to exit.)')
+            print('Multiple Ux Clients are detected. Please select one process to continue: (Submit "0" to exit.)')
             # Optimize the prompt layout by formatting each column's width
             indexWidth: int = max(map(lambda x: len(str(x + 1)), range(len(processList)))) + 2
             pidWidth: int = max(map(lambda x: len(str(x.pid)), processList)) + 2
