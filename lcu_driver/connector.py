@@ -2,18 +2,70 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
+from psutil import Process # Type annotation only
 
 from .connection import Connection
 from .events.managers import ConnectorEventManager, WebsocketEventManager
 from .utils import _return_ux_process
+from .exceptions import NoClientUxDetected # Handles one case of the number of Client Ux processes
 
 logger = logging.getLogger('lcu-driver')
 
+def chooseClient(processList: list[Process]): # Allows users to select one running Ux Client
+    if isinstance(processList, list) and all(map(lambda x: isinstance(x, Process), processList)):
+        if len(processList) == 0:
+            raise NoClientUxDetected()
+        elif len(processList) == 1:
+            process = processList[0]
+        else:
+            print('Multiple Ux Clients are detected. Please select one process to continue: (Submit "0" to exit.)')
+            # Optimize the prompt layout by formatting each column's width
+            indexWidth: int = max(map(lambda x: len(str(x + 1)), range(len(processList)))) + 2
+            pidWidth: int = max(map(lambda x: len(str(x.pid)), processList)) + 2
+            statusWidth: int = max(map(lambda x: len(str(x.status())), processList)) + 2
+            createTimeWidth: int = max(map(lambda x: len(str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(x.create_time())))), processList)) + 2
+            filePathWidth: int = max(map(lambda x: len(str(x.exe())), processList)) + 2
+            print("{0:^{5}}{1:^{6}}{2:^{7}}{3:^{8}}{4:^{9}}".format("No.", "pid", "status", "createTime", "filePath", indexWidth, pidWidth, statusWidth, createTimeWidth, filePathWidth))
+            latest_index: int = 0 # The index of the process with the latest creation time
+            max_procCreateTime: str = "" # An intermediate variable to store the latest creation time. It obeys one-to-one correspondence with the integer timestamp, so comparisons can be made on it
+            for i in range(len(processList)):
+                process = processList[i]
+                procId: int = process.pid
+                procStatus: str = process.status() # Based on the status, this table may only display the running processes in a future commit
+                procCreateTime: str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(process.create_time()))
+                procFilePath: str = process.exe()
+                print("{0:^{5}}{1:^{6}}{2:^{7}}{3:^{8}}{4:^{9}}".format(i + 1, procId, procStatus, procCreateTime, procFilePath, indexWidth, pidWidth, statusWidth, createTimeWidth, filePathWidth))
+                if max_procCreateTime < procCreateTime:
+                    max_procCreateTime = procCreateTime
+                    latest_index = i
+            while True:
+                processIndex_str: str = input()
+                if processIndex_str == "": # Enter nothing to select the default option
+                    processIndex: int = latest_index
+                    break
+                if processIndex_str == "0":
+                    exit(0)
+                elif processIndex_str in set(map(str, range(1, len(processList) + 1))):
+                    processIndex = int(processIndex_str) - 1
+                    break
+                else:
+                    print("Please input an integer between 1 and %d." %(len(processList)))
+            process = processList[processIndex]
+        return process
+    else:
+        raise TypeError('invalid type of parameter "processList". Pass a list of Process objects instead')
 
 class BaseConnector(ConnectorEventManager, ABC):
     def __init__(self, loop=None):
         super().__init__()
-        self.loop = loop or asyncio.get_event_loop()
+        if loop is not None:
+            self.loop = loop
+        else:
+            try:
+                self.loop = asyncio.get_event_loop()
+            except RuntimeError:
+                self.loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.loop)
         self.ws = WebsocketEventManager()
 
     @abstractmethod
@@ -54,11 +106,8 @@ class Connector(BaseConnector):
         """
         try:
             def wrapper():
-                process = next(_return_ux_process(), None)
-                while not process:
-                    process = next(_return_ux_process(), None)
-                    time.sleep(0.5)
-
+                processList: list[Process] = _return_ux_process()
+                process = chooseClient(processList)
                 connection = Connection(self, process)
                 self.register_connection(connection)
                 self.loop.run_until_complete(connection.init())
@@ -109,15 +158,11 @@ class MultipleClientConnector(BaseConnector):
         tasks = []
         try:
             while True:
-                process_iter = _return_ux_process()
-
-                process = next(process_iter, None)
-                while process:
+                processList: list[Process] = _return_ux_process()
+                for process in processList:
                     connection = Connection(self, process)
                     if not self._process_was_initialized(connection):
                         tasks.append(asyncio.create_task(connection.init()))
-
-                    process = next(process_iter, None)
                 await asyncio.sleep(0.5)
 
         except KeyboardInterrupt:

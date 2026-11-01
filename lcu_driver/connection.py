@@ -1,4 +1,7 @@
 import asyncio
+import base64
+import json
+import os
 import logging
 from json import loads, JSONDecodeError, dumps
 from typing import Union, Optional, Tuple
@@ -37,27 +40,40 @@ class Connection:
         if isinstance(process_or_string, Process):
             process_args = parse_cmdline_args(process_or_string.cmdline())
 
-            self._lcu_pid = process_or_string.pid
-            self._pid = int(process_args['app-pid'])
-            self._port = int(process_args['app-port'])
-            self._auth_key = process_args['remoting-auth-token']
-            self._installation_path = process_args['install-directory']
+            self._ux_pid = process_or_string.pid
+            if process_or_string.name() in {"LeagueClientUx.exe", "LeagueClientUx"}:
+                self._main_pid = int(process_args['--app-pid'])
+                self._port = int(process_args['--app-port'])
+                self._auth_key = process_args['--remoting-auth-token']
+                self._installation_path = process_args['--install-directory']
+            else: # process_or_string.name() in {"TFTClient-Win64-Shipping.exe", "TFTClient-Win64-Shipping"}:
+                riotgamesapi_settings = json.loads(base64.b64decode(process_args['-riotgamesapi-settings']).decode("utf-8"))
+                self._main_pid = process_or_string.parent().pid # Let it throw an exception if the parent process isn't found, since it should always be found
+                self._port = int(riotgamesapi_settings['riotclient']['app-port'])
+                self._auth_key = riotgamesapi_settings['riotclient']['auth-token']
+                self._installation_path = os.path.dirname(process_or_string.parent().exe())
+            auth_string = f"riot:{self._auth_key}"
+            encoded_auth = base64.b64encode(auth_string.encode()).decode()
+            self._headers['Authorization'] = f"Basic {encoded_auth}"
 
         elif isinstance(process_or_string, str):
             lockfile_parts = process_or_string.split(':')
 
-            self._lcu_pid = int(lockfile_parts[0])
-            self._pid = int(lockfile_parts[1])
+            self._ux_pid = int(lockfile_parts[0])
+            self._main_pid = int(lockfile_parts[1])
             self._port = int(lockfile_parts[2])
             self._auth_key = lockfile_parts[3]
             self._installation_path = None
+            auth_string = f"riot:{self._auth_key}"
+            encoded_auth = base64.b64encode(auth_string.encode()).decode()
+            self._headers['Authorization'] = f"Basic {encoded_auth}"
 
     async def init(self):
         """Initialize the connection. It's called by the connector when it finds a connection
 
         :rtype: none
         """
-        self.session = aiohttp.ClientSession(auth=aiohttp.BasicAuth('riot', self._auth_key), headers=self._headers)
+        self.session = aiohttp.ClientSession(headers=self._headers)
 
         setattr(self, 'request', self.request)
 
@@ -79,16 +95,16 @@ class Connection:
     async def _close(self):
         self.closed = True
         await self._connector.run_event('close', self)
-        self._connector.unregister_connection(self._lcu_pid)
+        self._connector.unregister_connection(self._ux_pid)
         await self.session.close()
 
     @property
     def pid(self) -> int:
-        """League Client Process Id
+        """Main Client Process Id
 
         :rtype: int
         """
-        return self._pid
+        return self._main_pid
 
     @property
     def protocols(self) -> Tuple[str, str]:
@@ -140,7 +156,7 @@ class Connection:
 
     def _produce_url(self, endpoint: str, **kwargs):
         """Return the URL to be requested."""
-        if self._pid is None:
+        if self._main_pid is None:
             raise EarlyPerform('request tried to be made with uninitialized or closed API')
 
         url = f'{self.address}{endpoint}'
@@ -160,7 +176,7 @@ class Connection:
         url = self._produce_url(endpoint, **kwargs)
         if kwargs.get('data'):
             kwargs['data'] = dumps(kwargs['data'])
-        return await self.session.request(method, url, verify_ssl=False, **kwargs)
+        return await self.session.request(method, url, ssl=False, **kwargs)
 
     async def run_ws(self):
         """Start the websoocket connection. This is responsible to raise Connector close event and
@@ -198,7 +214,7 @@ class Connection:
         while True:
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(f'{self.address}/riotclient/region-locale', verify_ssl=False) as _:
+                    async with session.get(f'{self.address}/riotclient/region-locale', ssl=False) as _:
                         break
             except aiohttp.client_exceptions.ClientConnectorError:
                 pass
